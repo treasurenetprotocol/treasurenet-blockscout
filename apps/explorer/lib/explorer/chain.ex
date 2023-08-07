@@ -4041,14 +4041,6 @@ defmodule Explorer.Chain do
     |> limit(^paging_options.page_size)
   end
 
-  defp handle_verified_contracts_paging_options(query, nil), do: query
-
-  defp handle_verified_contracts_paging_options(query, paging_options) do
-    query
-    |> page_verified_contracts(paging_options)
-    |> limit(^paging_options.page_size)
-  end
-
   defp handle_withdrawals_paging_options(query, nil), do: query
 
   defp handle_withdrawals_paging_options(query, paging_options) do
@@ -4107,19 +4099,11 @@ defmodule Explorer.Chain do
       :required ->
         from(q in query,
           inner_join: a in assoc(q, ^association),
+          as: ^association,
           left_join: b in assoc(a, ^nested_preload),
+          as: ^nested_preload,
           preload: [{^association, {a, [{^nested_preload, b}]}}]
         )
-    end
-  end
-
-  defp join_association(query, association, necessity) when is_atom(association) do
-    case necessity do
-      :optional ->
-        preload(query, ^association)
-
-      :required ->
-        from(q in query, inner_join: a in assoc(q, ^association), preload: [{^association, a}])
     end
   end
 
@@ -4129,7 +4113,7 @@ defmodule Explorer.Chain do
         preload(query, ^association)
 
       :required ->
-        from(q in query, inner_join: a in assoc(q, ^association), preload: [{^association, a}])
+        from(q in query, inner_join: a in assoc(q, ^association), as: ^association, preload: [{^association, a}])
     end
   end
 
@@ -4327,12 +4311,6 @@ defmodule Explorer.Chain do
       [ctb, t],
       ^condition
     )
-  end
-
-  defp page_verified_contracts(query, %PagingOptions{key: nil}), do: query
-
-  defp page_verified_contracts(query, %PagingOptions{key: {id}}) do
-    where(query, [contract], contract.id < ^id)
   end
 
   @doc """
@@ -6099,50 +6077,24 @@ defmodule Explorer.Chain do
   @spec verified_contracts([
           paging_options
           | necessity_by_association_option
-          | {:filter, :solidity | :vyper}
+          | {:filter, :solidity | :vyper | :yul}
           | {:search, String.t() | {:api?, true | false}}
         ]) :: [SmartContract.t()]
   def verified_contracts(options \\ []) do
     paging_options = Keyword.get(options, :paging_options, @default_paging_options)
+    sorting_options = Keyword.get(options, :sorting, [])
     necessity_by_association = Keyword.get(options, :necessity_by_association, %{})
     filter = Keyword.get(options, :filter, nil)
+
     search_string = Keyword.get(options, :search, nil)
 
-    query = from(contract in SmartContract, select: contract, order_by: [desc: :id])
+    query = SmartContract.list_query(paging_options, sorting_options, filter, search_string)
 
     query
-    |> filter_contracts(filter)
-    |> search_contracts(search_string)
-    |> handle_verified_contracts_paging_options(paging_options)
+    |> dbg()
     |> join_associations(necessity_by_association)
     |> select_repo(options).all()
   end
-
-  defp search_contracts(basic_query, nil), do: basic_query
-
-  defp search_contracts(basic_query, search_string) do
-    from(contract in basic_query,
-      where:
-        ilike(contract.name, ^"%#{search_string}%") or
-          ilike(fragment("'0x' || encode(?, 'hex')", contract.address_hash), ^"%#{search_string}%")
-    )
-  end
-
-  defp filter_contracts(basic_query, :solidity) do
-    basic_query
-    |> where(is_vyper_contract: ^false)
-  end
-
-  defp filter_contracts(basic_query, :vyper) do
-    basic_query
-    |> where(is_vyper_contract: ^true)
-  end
-
-  defp filter_contracts(basic_query, :yul) do
-    from(query in basic_query, where: is_nil(query.abi))
-  end
-
-  defp filter_contracts(basic_query, _), do: basic_query
 
   def count_verified_contracts do
     Repo.aggregate(SmartContract, :count, timeout: :infinity)

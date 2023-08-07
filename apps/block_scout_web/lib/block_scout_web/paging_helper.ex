@@ -183,4 +183,15 @@ defmodule BlockScoutWeb.PagingHelper do
   defp do_tokens_sorting("circulating_market_cap", "asc"), do: [asc_nulls_first: :circulating_market_cap]
   defp do_tokens_sorting("circulating_market_cap", "desc"), do: [desc_nulls_last: :circulating_market_cap]
   defp do_tokens_sorting(_, _), do: []
+
+  def smart_contracts_sorting(%{"sort" => sort_field, "order" => order}) do
+    [sorting: do_smart_contracts_sorting(sort_field, order)]
+  end
+
+  def smart_contracts_sorting(_), do: []
+
+  defp do_smart_contracts_sorting("balance", "asc"), do: [{:asc_nulls_first, :fetched_coin_balance, :address}]
+  defp do_smart_contracts_sorting("balance", "desc"), do: [{:desc_nulls_last, :fetched_coin_balance, :address}]
+  defp do_smart_contracts_sorting("txs_count", "asc"), do: [{:asc_nulls_first, :transactions_count, :address}]
+  defp do_smart_contracts_sorting("txs_count", "desc"), do: [{:desc_nulls_last, :transactions_count, :address}]
 end
