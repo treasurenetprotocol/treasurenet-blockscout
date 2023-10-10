@@ -168,6 +168,48 @@ defmodule Explorer.Chain.Token do
     from(token in __MODULE__, where: token.contract_address_hash in ^contract_address_hashes)
   end
 
+  @doc """
+  Lists the top `t:Explorer.Chain.Token.t/0`'s'.
+  """
+  @spec list_top(String.t(), [
+          Chain.paging_options()
+          | {:sorting, sorting_params()}
+          | {:token_type, [String.t()]}
+        ]) :: [Token.t()]
+  def list_top(filter, options \\ []) do
+    paging_options = Keyword.get(options, :paging_options, @default_paging_options)
+    token_type = Keyword.get(options, :token_type, nil)
+    sorting = Keyword.get(options, :sorting, [])
+
+    fetch_top_tokens(filter, paging_options, token_type, sorting, options)
+  end
+
+  defp fetch_top_tokens(filter, paging_options, token_type, sorting, options) do
+    base_query = Token.base_token_query(token_type, sorting)
+
+    base_query_with_paging =
+      base_query
+      |> Token.page_tokens(paging_options, sorting)
+      |> limit(^paging_options.page_size)
+
+    query =
+      if filter && filter !== "" do
+        case Search.prepare_search_term(filter) do
+          {:some, filter_term} ->
+            base_query_with_paging
+            |> where(fragment("to_tsvector('english', symbol || ' ' || name) @@ to_tsquery(?)", ^filter_term))
+
+          _ ->
+            base_query_with_paging
+        end
+      else
+        base_query_with_paging
+      end
+
+    query
+    |> select_repo(options).all()
+  end
+
   def base_token_query(type, sorting) do
     query = from(t in Token, preload: [:contract_address])
 

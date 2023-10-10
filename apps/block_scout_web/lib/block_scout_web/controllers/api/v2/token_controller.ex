@@ -4,6 +4,7 @@ defmodule BlockScoutWeb.API.V2.TokenController do
   alias BlockScoutWeb.AccessHelper
   alias BlockScoutWeb.API.V2.TransactionView
   alias Explorer.Chain
+  alias Explorer.Chain.Token
   alias Indexer.Fetcher.TokenTotalSupplyOnDemand
 
   import BlockScoutWeb.Chain,
@@ -210,7 +211,7 @@ defmodule BlockScoutWeb.API.V2.TokenController do
       |> Keyword.merge(tokens_sorting(params))
       |> Keyword.merge(@api_true)
 
-    {tokens, next_page} = filter |> Chain.list_top_tokens(options) |> split_list_by_page()
+    {tokens, next_page} = filter |> Token.list_top(options) |> split_list_by_page()
 
     next_page_params = next_page |> next_page_params(tokens, delete_parameters_from_next_page_params(params))
 

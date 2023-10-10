@@ -2089,45 +2089,6 @@ defmodule Explorer.Chain do
   end
 
   @doc """
-  Lists the top `t:Explorer.Chain.Token.t/0`'s'.
-
-  """
-  @spec list_top_tokens(String.t()) :: [{Token.t(), non_neg_integer()}]
-  def list_top_tokens(filter, options \\ []) do
-    paging_options = Keyword.get(options, :paging_options, @default_paging_options)
-    token_type = Keyword.get(options, :token_type, nil)
-    sorting = Keyword.get(options, :sorting, [])
-
-    fetch_top_tokens(filter, paging_options, token_type, sorting, options)
-  end
-
-  defp fetch_top_tokens(filter, paging_options, token_type, sorting, options) do
-    base_query = Token.base_token_query(token_type, sorting)
-
-    base_query_with_paging =
-      base_query
-      |> Token.page_tokens(paging_options, sorting)
-      |> limit(^paging_options.page_size)
-
-    query =
-      if filter && filter !== "" do
-        case Search.prepare_search_term(filter) do
-          {:some, filter_term} ->
-            base_query_with_paging
-            |> where(fragment("to_tsvector('english', symbol || ' ' || name) @@ to_tsquery(?)", ^filter_term))
-
-          _ ->
-            base_query_with_paging
-        end
-      else
-        base_query_with_paging
-      end
-
-    query
-    |> select_repo(options).all()
-  end
-
-  @doc """
   Calls `reducer` on a stream of `t:Explorer.Chain.Block.t/0` without `t:Explorer.Chain.Block.Reward.t/0`.
   """
   def stream_blocks_without_rewards(initial, reducer, limited? \\ false) when is_function(reducer, 2) do
@@ -6072,28 +6033,6 @@ defmodule Explorer.Chain do
 
   def filter_token_creation_dynamic(dynamic) do
     dynamic([tx, created_token: created_token], ^dynamic or not is_nil(created_token))
-  end
-
-  @spec verified_contracts([
-          paging_options
-          | necessity_by_association_option
-          | {:filter, :solidity | :vyper | :yul}
-          | {:search, String.t() | {:api?, true | false}}
-        ]) :: [SmartContract.t()]
-  def verified_contracts(options \\ []) do
-    paging_options = Keyword.get(options, :paging_options, @default_paging_options)
-    sorting_options = Keyword.get(options, :sorting, [])
-    necessity_by_association = Keyword.get(options, :necessity_by_association, %{})
-    filter = Keyword.get(options, :filter, nil)
-
-    search_string = Keyword.get(options, :search, nil)
-
-    query = SmartContract.list_query(paging_options, sorting_options, filter, search_string)
-
-    query
-    |> dbg()
-    |> join_associations(necessity_by_association)
-    |> select_repo(options).all()
   end
 
   def count_verified_contracts do

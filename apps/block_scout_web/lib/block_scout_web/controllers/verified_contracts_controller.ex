@@ -10,7 +10,7 @@ defmodule BlockScoutWeb.VerifiedContractsController do
   alias Explorer.Chain
   alias Phoenix.View
 
-  @necessity_by_association %{[address: :token] => :optional}
+  @necessity_by_association %{[address: :token] => :optional, address: :required}
 
   def index(conn, %{"type" => "JSON"} = params) do
     full_options =

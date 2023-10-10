@@ -182,6 +182,7 @@ defmodule BlockScoutWeb.Chain do
 
     holder_count = parse_integer(holder_count_string)
     token_name = if is_name_null_string == "true", do: nil, else: name_string
+
     case Hash.Address.cast(contract_address_hash_string) do
       {:ok, contract_address_hash} ->
         [
@@ -192,7 +193,7 @@ defmodule BlockScoutWeb.Chain do
                 circulating_market_cap: market_cap_decimal,
                 holder_count: holder_count,
                 name: token_name,
-                contract_address_hash: contract_address_hash_str
+                contract_address_hash: contract_address_hash
               }
           }
         ]
