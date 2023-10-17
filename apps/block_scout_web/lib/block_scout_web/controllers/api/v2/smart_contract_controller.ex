@@ -198,7 +198,7 @@ defmodule BlockScoutWeb.API.V2.SmartContractController do
       |> Keyword.merge(@api_true)
       |> dbg()
 
-    smart_contracts_plus_one = Chain.verified_contracts(full_options)
+    smart_contracts_plus_one = SmartContract.verified_contracts(full_options)
     {smart_contracts, next_page} = split_list_by_page(smart_contracts_plus_one)
 
     next_page_params =

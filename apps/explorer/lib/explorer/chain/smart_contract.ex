@@ -12,12 +12,10 @@ defmodule Explorer.Chain.SmartContract do
 
   use Explorer.Schema
 
-  import Explorer.SortingHelper
-
   alias Ecto.Changeset
   alias EthereumJSONRPC.Contract
   alias Explorer.Counters.AverageBlockTime
-  alias Explorer.{Chain, PagingOptions, Repo}
+  alias Explorer.{Chain, Repo, SortingHelper}
   alias Explorer.Chain.{Address, ContractMethod, DecompiledSmartContract, Hash}
   alias Explorer.Chain.SmartContract.ExternalLibrary
   alias Explorer.SmartContract.Reader
@@ -44,7 +42,7 @@ defmodule Explorer.Chain.SmartContract do
     @burn_address_hash_string
   end
 
-  @default_sorting [{:asc, :fetched_coin_balance, :address}, desc: :id]
+  @default_sorting [desc: :id]
 
   @typep api? :: {:api?, true | false}
 
@@ -975,11 +973,11 @@ defmodule Explorer.Chain.SmartContract do
           | Chain.necessity_by_association_option()
           | {:filter, :solidity | :vyper | :yul}
           | {:search, String.t()}
-          | {:sorting, sorting_params()}
+          | {:sorting, SortingHelper.sorting_params()}
           | Chain.api?()
-        ]) :: [SmartContract.t()]
+        ]) :: [__MODULE__.t()]
   def verified_contracts(options \\ []) do
-    paging_options = Keyword.get(options, :paging_options, @default_paging_options)
+    paging_options = Keyword.get(options, :paging_options, Chain.default_paging_options())
     sorting_options = Keyword.get(options, :sorting, [])
     necessity_by_association = Keyword.get(options, :necessity_by_association, %{})
     filter = Keyword.get(options, :filter, nil)
@@ -990,8 +988,8 @@ defmodule Explorer.Chain.SmartContract do
     query
     |> filter_contracts(filter)
     |> search_contracts(search_string)
-    |> apply_sorting(sorting_options, @default_sorting)
-    |> page_with_sorting(paging_options, sorting_options, @default_sorting)
+    |> SortingHelper.apply_sorting(sorting_options, @default_sorting)
+    |> SortingHelper.page_with_sorting(paging_options, sorting_options, @default_sorting)
     |> dbg()
     |> Chain.join_associations(necessity_by_association)
     |> Chain.select_repo(options).all()

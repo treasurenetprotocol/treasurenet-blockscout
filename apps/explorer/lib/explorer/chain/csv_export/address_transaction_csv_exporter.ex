@@ -44,7 +44,7 @@ defmodule Explorer.Chain.CSVExport.AddressTransactionCsvExporter do
             else: &1
           )).()
 
-    Chain.address_to_transactions_without_rewards(address_hash, options)
+    Transaction.address_to_transactions_without_rewards(address_hash, options)
   end
 
   defp to_csv_format(transactions, address_hash, exchange_rate) do

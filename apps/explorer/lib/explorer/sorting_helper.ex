@@ -24,17 +24,21 @@ defmodule Explorer.SortingHelper do
     sorting |> sorting_with_defaults(default_sorting) |> apply_as(query)
   end
 
+  defp sorting_with_defaults([], default_sorting) when is_list(default_sorting), do: default_sorting
+
   defp sorting_with_defaults(sorting, default_sorting) when is_list(sorting) and is_list(default_sorting) do
     (sorting ++ default_sorting)
     |> Enum.uniq_by(fn
       {_, field} -> field
       {_, field, as} -> {field, as}
+      {:dynamic, key_name, _, _} -> key_name
     end)
   end
 
   defp apply_as(sorting, query) do
     sorting
     |> Enum.reduce(query, fn
+      {:dynamic, _key_name, order, dynamic}, query -> query |> order_by(^[{order, dynamic}])
       {order, column, binding}, query -> query |> order_by([{^order, field(as(^binding), ^column)}])
       no_binding, query -> query |> order_by(^[no_binding])
     end)
@@ -66,6 +70,10 @@ defmodule Explorer.SortingHelper do
     fn key -> page_by_column(key, column, order, do_page_with_sorting(rest)) end
   end
 
+  defp do_page_with_sorting([{:dynamic, key_name, order, dynamic} | rest]) do
+    fn key -> page_by_column(key, {:dynamic, key_name, dynamic}, order, do_page_with_sorting(rest)) end
+  end
+
   defp do_page_with_sorting([{order, column, binding} | rest]) do
     fn key -> page_by_column(key, {column, binding}, order, do_page_with_sorting(rest)) end
   end
@@ -83,6 +91,66 @@ defmodule Explorer.SortingHelper do
   # but at the moment using such dynamic in comparisons lead ecto to
   # failure in type inference from scheme and it expects some default types
   # like string instead of `Hash.Address`
+  defp page_by_column(key, {:dynamic, key_name, dynamic}, :desc_nulls_last, next_column) do
+    case key[key_name] do
+      nil ->
+        dynamic([t], is_nil(^dynamic) and ^apply_next_column(next_column, key))
+
+      value ->
+        dynamic(
+          [t],
+          is_nil(^dynamic) or ^dynamic < ^value or
+            (^dynamic == ^value and ^apply_next_column(next_column, key))
+        )
+    end
+  end
+
+  defp page_by_column(key, {:dynamic, key_name, dynamic}, :asc_nulls_first, next_column) do
+    case key[key_name] do
+      nil ->
+        apply_next_column(next_column, key)
+
+      value ->
+        dynamic(
+          [t],
+          not is_nil(^dynamic) and
+            (^dynamic > ^value or
+               (^dynamic == ^value and ^apply_next_column(next_column, key)))
+        )
+    end
+  end
+
+  defp page_by_column(key, {:dynamic, key_name, dynamic}, :asc, next_column) do
+    case key[key_name] do
+      nil ->
+        dynamic([t], is_nil(^dynamic) and ^apply_next_column(next_column, key))
+
+      value ->
+        dynamic(
+          [t],
+          is_nil(^dynamic) or
+            (^dynamic > ^value or
+               (^dynamic == ^value and ^apply_next_column(next_column, key)))
+        )
+        |> dbg()
+    end
+  end
+
+  defp page_by_column(key, {:dynamic, key_name, dynamic}, :desc, next_column) do
+    case key[key_name] do
+      nil ->
+        apply_next_column(next_column, key)
+
+      value ->
+        dynamic(
+          [t],
+          not is_nil(^dynamic) and
+            (^dynamic < ^value or
+               (^dynamic == ^value and ^apply_next_column(next_column, key)))
+        )
+    end
+  end
+
   defp page_by_column(key, {column, binding}, :desc_nulls_last, next_column) do
     case key[column] do
       nil ->
@@ -120,7 +188,7 @@ defmodule Explorer.SortingHelper do
       value ->
         dynamic(
           [t],
-          is_nil(field(t, ^column)) or
+          is_nil(field(as(^binding), ^column)) or
             (field(as(^binding), ^column) > ^value or
                (field(as(^binding), ^column) == ^value and ^apply_next_column(next_column, key)))
         )

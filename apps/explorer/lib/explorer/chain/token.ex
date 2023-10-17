@@ -21,11 +21,10 @@ defmodule Explorer.Chain.Token do
   use Explorer.Schema
 
   import Ecto.{Changeset, Query}
-  import Explorer.SortingHelper
 
   alias Ecto.Changeset
-  alias Explorer.Chain.{Address, Hash, Token}
-  alias Explorer.PagingOptions
+  alias Explorer.{Chain, SortingHelper}
+  alias Explorer.Chain.{Address, Hash, Token, Search}
   alias Explorer.SmartContract.Helper
 
   @default_sorting [
@@ -169,73 +168,43 @@ defmodule Explorer.Chain.Token do
   end
 
   @doc """
-  Lists the top `t:Explorer.Chain.Token.t/0`'s'.
+  Lists the top `t:__MODULE__.t/0`'s'.
   """
-  @spec list_top(String.t(), [
+  @spec list_top(String.t() | nil, [
           Chain.paging_options()
-          | {:sorting, sorting_params()}
+          | {:sorting, SortingHelper.sorting_params()}
           | {:token_type, [String.t()]}
         ]) :: [Token.t()]
   def list_top(filter, options \\ []) do
-    paging_options = Keyword.get(options, :paging_options, @default_paging_options)
+    paging_options = Keyword.get(options, :paging_options, Chain.default_paging_options())
     token_type = Keyword.get(options, :token_type, nil)
     sorting = Keyword.get(options, :sorting, [])
 
-    fetch_top_tokens(filter, paging_options, token_type, sorting, options)
-  end
-
-  defp fetch_top_tokens(filter, paging_options, token_type, sorting, options) do
-    base_query = Token.base_token_query(token_type, sorting)
-
-    base_query_with_paging =
-      base_query
-      |> Token.page_tokens(paging_options, sorting)
-      |> limit(^paging_options.page_size)
-
-    query =
-      if filter && filter !== "" do
-        case Search.prepare_search_term(filter) do
-          {:some, filter_term} ->
-            base_query_with_paging
-            |> where(fragment("to_tsvector('english', symbol || ' ' || name) @@ to_tsquery(?)", ^filter_term))
-
-          _ ->
-            base_query_with_paging
-        end
-      else
-        base_query_with_paging
-      end
-
-    query
-    |> select_repo(options).all()
-  end
-
-  def base_token_query(type, sorting) do
     query = from(t in Token, preload: [:contract_address])
 
-    query |> apply_filter(type) |> apply_sorting(sorting, @default_sorting)
+    sorted_paginated_query =
+      query
+      |> apply_filter(token_type)
+      |> SortingHelper.apply_sorting(sorting, @default_sorting)
+      |> SortingHelper.page_with_sorting(paging_options, sorting, @default_sorting)
+
+    filtered_query =
+      case filter && filter !== "" && Search.prepare_search_term(filter) do
+        {:some, filter_term} ->
+          sorted_paginated_query
+          |> where(fragment("to_tsvector('english', symbol || ' ' || name) @@ to_tsquery(?)", ^filter_term))
+
+        _ ->
+          sorted_paginated_query
+      end
+
+    filtered_query
+    |> Chain.select_repo(options).all()
   end
 
   defp apply_filter(query, empty_type) when empty_type in [nil, []], do: query
 
   defp apply_filter(query, token_types) when is_list(token_types) do
     from(t in query, where: t.type in ^token_types)
-  end
-
-  def page_tokens(query, paging_options, sorting \\ [])
-  def page_tokens(query, %PagingOptions{key: nil}, _sorting), do: query
-
-  def page_tokens(
-        query,
-        %PagingOptions{
-          key: %{} = key
-        },
-        sorting
-      ) do
-    dynamic_where = page_with_sorting(sorting, @default_sorting)
-
-    from(token in query,
-      where: ^dynamic_where.(key)
-    )
   end
 end
