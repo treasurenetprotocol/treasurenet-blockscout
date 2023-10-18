@@ -4,6 +4,8 @@
 
 ### Features
 
+- [#8651](https://github.com/blockscout/blockscout/pull/8651) - Add `stability_fee` for CHAIN_TYPE=stability
+
 ### Fixes
 
 ### Chore
