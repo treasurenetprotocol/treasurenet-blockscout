@@ -108,7 +108,7 @@ defmodule Explorer.SortingHelper do
   defp page_by_column(key, {:dynamic, key_name, dynamic}, :asc_nulls_first, next_column) do
     case key[key_name] do
       nil ->
-        apply_next_column(next_column, key)
+        dynamic([t], not is_nil(^dynamic) or ^apply_next_column(next_column, key))
 
       value ->
         dynamic(
@@ -120,7 +120,7 @@ defmodule Explorer.SortingHelper do
     end
   end
 
-  defp page_by_column(key, {:dynamic, key_name, dynamic}, :asc, next_column) do
+  defp page_by_column(key, {:dynamic, key_name, dynamic}, order, next_column) when order in ~w(asc asc_nulls_last)a do
     case key[key_name] do
       nil ->
         dynamic([t], is_nil(^dynamic) and ^apply_next_column(next_column, key))
@@ -132,14 +132,14 @@ defmodule Explorer.SortingHelper do
             (^dynamic > ^value or
                (^dynamic == ^value and ^apply_next_column(next_column, key)))
         )
-        |> dbg()
     end
   end
 
-  defp page_by_column(key, {:dynamic, key_name, dynamic}, :desc, next_column) do
+  defp page_by_column(key, {:dynamic, key_name, dynamic}, order, next_column)
+       when order in ~w(desc desc_nulls_first)a do
     case key[key_name] do
       nil ->
-        apply_next_column(next_column, key)
+        dynamic([t], not is_nil(^dynamic) or ^apply_next_column(next_column, key))
 
       value ->
         dynamic(
@@ -168,7 +168,7 @@ defmodule Explorer.SortingHelper do
   defp page_by_column(key, {column, binding}, :asc_nulls_first, next_column) do
     case key[column] do
       nil ->
-        apply_next_column(next_column, key)
+        dynamic([t], not is_nil(field(as(^binding), ^column)) or ^apply_next_column(next_column, key))
 
       value ->
         dynamic(
@@ -180,7 +180,7 @@ defmodule Explorer.SortingHelper do
     end
   end
 
-  defp page_by_column(key, {column, binding}, :asc, next_column) do
+  defp page_by_column(key, {column, binding}, order, next_column) when order in ~w(asc asc_nulls_last)a do
     case key[column] do
       nil ->
         dynamic([t], is_nil(field(as(^binding), ^column)) and ^apply_next_column(next_column, key))
@@ -192,11 +192,10 @@ defmodule Explorer.SortingHelper do
             (field(as(^binding), ^column) > ^value or
                (field(as(^binding), ^column) == ^value and ^apply_next_column(next_column, key)))
         )
-        |> dbg()
     end
   end
 
-  defp page_by_column(key, {column, binding}, :desc, next_column) do
+  defp page_by_column(key, {column, binding}, order, next_column) when order in ~w(desc desc_nulls_first)a do
     case key[column] do
       nil ->
         apply_next_column(next_column, key)
@@ -252,14 +251,13 @@ defmodule Explorer.SortingHelper do
             (field(t, ^column) > ^value or
                (field(t, ^column) == ^value and ^apply_next_column(next_column, key)))
         )
-        |> dbg()
     end
   end
 
   defp page_by_column(key, column, order, next_column) when order in ~w(desc desc_nulls_first)a do
     case key[column] do
       nil ->
-        apply_next_column(next_column, key)
+        dynamic([t], not is_nil(field(t, ^column)) or ^apply_next_column(next_column, key))
 
       value ->
         dynamic(

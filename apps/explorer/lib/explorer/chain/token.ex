@@ -24,7 +24,7 @@ defmodule Explorer.Chain.Token do
 
   alias Ecto.Changeset
   alias Explorer.{Chain, SortingHelper}
-  alias Explorer.Chain.{Address, Hash, Token, Search}
+  alias Explorer.Chain.{Address, Hash, Search, Token}
   alias Explorer.SmartContract.Helper
 
   @default_sorting [

@@ -51,7 +51,7 @@ defmodule BlockScoutWeb.Chain do
     end
   end
 
-  @page_size 3
+  @page_size 50
   @default_paging_options %PagingOptions{page_size: @page_size + 1}
   @address_hash_len 40
   @tx_block_hash_len 64
@@ -587,7 +587,8 @@ defmodule BlockScoutWeb.Chain do
     %{
       "smart_contract_id" => smart_contract.id,
       "tx_count" => smart_contract.address.transactions_count,
-      "coin_balance" => Wei.to(smart_contract.address.fetched_coin_balance, :wei)
+      "coin_balance" =>
+        smart_contract.address.fetched_coin_balance && Wei.to(smart_contract.address.fetched_coin_balance, :wei)
     }
   end
 

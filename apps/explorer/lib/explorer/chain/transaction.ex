@@ -1269,7 +1269,6 @@ defmodule Explorer.Chain.Transaction do
     address_hash
     |> address_to_transactions_tasks(options, old_ui?)
     |> wait_for_address_transactions()
-    |> dbg()
     |> Enum.sort(compare_custom_sorting(Keyword.get(options, :sorting, [])))
     # |> Enum.sort(&{&1.block_number, &1.index}, &>=/2)
     |> Enum.dedup_by(& &1.hash)
@@ -1336,9 +1335,7 @@ defmodule Explorer.Chain.Transaction do
     end
   end
 
-  defp compare_custom_sorting([{:dynamic, :fee, order, _dynamic_fee}] = a) do
-    dbg(a)
-
+  defp compare_custom_sorting([{:dynamic, :fee, order, _dynamic_fee}]) do
     fn a, b ->
       case Decimal.compare(a |> Chain.fee(:wei) |> elem(1), b |> Chain.fee(:wei) |> elem(1)) do
         :eq -> compare_default_sorting(a, b)
@@ -1394,7 +1391,6 @@ defmodule Explorer.Chain.Transaction do
     |> Chain.where_block_number_in_period(from_block, to_block)
     |> SortingHelper.apply_sorting(sorting, @default_sorting)
     |> SortingHelper.page_with_sorting(paging_options, sorting, @default_sorting)
-    |> dbg()
   end
 
   defp order_for_transactions(query, true) do
@@ -1479,13 +1475,6 @@ defmodule Explorer.Chain.Transaction do
   def dynamic_fee do
     dynamic([tx], tx.gas_price * fragment("COALESCE(?, ?)", tx.gas_used, tx.gas))
   end
-
-  @default_sorting [
-    desc: :block_number,
-    desc: :index,
-    desc: :inserted_at,
-    asc: :hash
-  ]
 
   def address_transactions_next_page_params(
         %__MODULE__{block_number: block_number, index: index, inserted_at: inserted_at, hash: hash, value: value} = tx

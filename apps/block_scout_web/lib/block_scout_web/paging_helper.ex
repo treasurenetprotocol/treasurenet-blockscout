@@ -3,8 +3,8 @@ defmodule BlockScoutWeb.PagingHelper do
     Helper for fetching filters and other url query parameters
   """
   import Explorer.Chain, only: [string_to_transaction_hash: 1]
-  alias Explorer.PagingOptions
   alias Explorer.Chain.Transaction
+  alias Explorer.PagingOptions
 
   @page_size 50
   @default_paging_options %PagingOptions{page_size: @page_size + 1}
@@ -195,6 +195,7 @@ defmodule BlockScoutWeb.PagingHelper do
   defp do_smart_contracts_sorting("balance", "desc"), do: [{:desc_nulls_last, :fetched_coin_balance, :address}]
   defp do_smart_contracts_sorting("txs_count", "asc"), do: [{:asc_nulls_first, :transactions_count, :address}]
   defp do_smart_contracts_sorting("txs_count", "desc"), do: [{:desc_nulls_last, :transactions_count, :address}]
+  defp do_smart_contracts_sorting(_, _), do: []
 
   def address_transactions_sorting(%{"sort" => sort_field, "order" => order}) do
     [sorting: do_address_transaction_sorting(sort_field, order)]
@@ -206,4 +207,5 @@ defmodule BlockScoutWeb.PagingHelper do
   defp do_address_transaction_sorting("value", "desc"), do: [desc: :value]
   defp do_address_transaction_sorting("fee", "asc"), do: [{:dynamic, :fee, :asc, Transaction.dynamic_fee()}]
   defp do_address_transaction_sorting("fee", "desc"), do: [{:dynamic, :fee, :desc, Transaction.dynamic_fee()}]
+  defp do_address_transaction_sorting(_, _), do: []
 end
