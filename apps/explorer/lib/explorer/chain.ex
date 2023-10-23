@@ -163,7 +163,6 @@ defmodule Explorer.Chain do
   """
   @type necessity_by_association :: %{association => necessity}
 
-
   @type necessity_by_association_option :: {:necessity_by_association, necessity_by_association}
   @type paging_options :: {:paging_options, PagingOptions.t()}
   @typep balance_by_day :: %{date: String.t(), value: Wei.t()}
@@ -656,7 +655,7 @@ defmodule Explorer.Chain do
     |> fetch_transactions_in_descending_order_by_block_and_index()
     |> where(execution_node_hash: ^execution_node_hash)
     |> join_associations(necessity_by_association)
-    |> put_has_token_transfers_to_tx(false)
+    |> Transaction.put_has_token_transfers_to_tx(false)
     |> (& &1).()
     |> select_repo(options).all()
     |> (&Enum.map(&1, fn tx -> preload_token_transfers(tx, @token_transfers_necessity_by_association, options) end)).()

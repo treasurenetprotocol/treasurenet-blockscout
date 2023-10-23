@@ -17,8 +17,8 @@ defmodule BlockScoutWeb.Chain do
 
   import Explorer.Helper, only: [parse_integer: 1]
 
-  alias Explorer.Account.{TagAddress, TagTransaction, WatchlistAddress}
   alias Ecto.Association.NotLoaded
+  alias Explorer.Account.{TagAddress, TagTransaction, WatchlistAddress}
   alias Explorer.Chain.Block.Reward
 
   alias Explorer.Chain.{

@@ -5,8 +5,13 @@ defmodule Explorer.Chain.TransactionTest do
 
   alias Ecto.Changeset
   alias Explorer.Chain.{Address, InternalTransaction, Transaction}
+  alias Explorer.PagingOptions
 
   doctest Transaction
+
+  setup :set_mox_global
+
+  setup :verify_on_exit!
 
   describe "changeset/2" do
     test "with valid attributes" do

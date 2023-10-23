@@ -3,21 +3,24 @@ defmodule Explorer.SortingHelper do
   Module that order and paginate queries dynamically based on default and provided sorting parameters.
   Example of sorting parameters:
   ```
-  [{:asc, :fetched_coin_balance, :address}, desc: :id]
+  [{:asc, :fetched_coin_balance, :address}, {:dynamic, :contract_code_size, :desc, dynamic([t], fragment(LENGTH(?), t.contract_source_code))}, desc: :id]
   ```
-  First list entry specify joined address table column as a column to order by, second entry specifies
-  own column name to order by.
+  First list entry specify joined address table column as a column to order by and paginate, second entry
+  specifies name of a key in paging_options and arbitrary dynamic that will be used in ordering and pagination,
+  third entry specifies own column name to order by and paginate.
   """
   require Explorer.SortingHelper
 
-  alias Explorer.PagingOptions
+  alias Explorer.{Chain, PagingOptions}
 
   import Ecto.Query
 
   @typep ordering :: :asc | :asc_nulls_first | :asc_nulls_last | :desc | :desc_nulls_first | :desc_nulls_last
   @typep column :: atom
   @typep binding :: atom
-  @type sorting_params :: [{ordering, column} | {ordering, column, binding}]
+  @type sorting_params :: [
+          {ordering, column} | {ordering, column, binding} | {:dynamic, column, ordering, Ecto.Query.dynamic_expr()}
+        ]
 
   @spec apply_sorting(Ecto.Query.t(), sorting_params, sorting_params) :: Ecto.Query.t()
   def apply_sorting(query, sorting, default_sorting) when is_list(sorting) and is_list(default_sorting) do
@@ -44,7 +47,7 @@ defmodule Explorer.SortingHelper do
     end)
   end
 
-  # @spec page_with_sorting(sorting_params, sorting_params) :: nil | (nil | maybe_improper_list | map -> any)
+  @spec page_with_sorting(Ecto.Query.t(), Chain.paging_options(), sorting_params, sorting_params) :: Ecto.Query.t()
   def page_with_sorting(query, %PagingOptions{key: key, page_size: page_size}, sorting, default_sorting)
       when not is_nil(key) do
     sorting

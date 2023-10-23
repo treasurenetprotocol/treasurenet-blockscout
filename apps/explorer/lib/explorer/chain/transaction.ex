@@ -1146,7 +1146,8 @@ defmodule Explorer.Chain.Transaction do
     paging_options = Keyword.get(options, :paging_options, Chain.default_paging_options())
 
     case Application.get_env(:block_scout_web, BlockScoutWeb.Chain)[:has_emission_funds] &&
-           Keyword.get(options, :direction) == :from &&
+           Keyword.get(options, :direction) != :from &&
+           Reward.address_has_rewards?(address_hash) &&
            Reward.get_validator_payout_key_by_mining_from_db(address_hash, options) do
       %{payout_key: block_miner_payout_address}
       when not is_nil(block_miner_payout_address) and address_hash == block_miner_payout_address ->
